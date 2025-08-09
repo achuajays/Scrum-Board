@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Issue } from '../lib/supabase';
 
 interface AddIssueModalProps {
+  workflowColumns: { id: string; title: string }[];
   onClose: () => void;
   onAdd: (issue: Omit<Issue, 'id' | 'created_at' | 'updated_at' | 'position'>) => void;
 }
@@ -34,16 +35,7 @@ const PRIORITY_OPTIONS = [
   { value: 'highest', label: 'Highest', color: 'bg-red-500' },
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'backlog', label: 'Backlog' },
-  { value: 'todo', label: 'To Do' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'dev', label: 'Dev' },
-  { value: 'uat', label: 'UAT' },
-  { value: 'done', label: 'Done' },
-];
-
-export const AddIssueModal: React.FC<AddIssueModalProps> = ({ onClose, onAdd }) => {
+export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, onClose, onAdd }) => {
   const [attachmentMethod, setAttachmentMethod] = React.useState<'url' | 'upload'>('url');
   const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = React.useState<string>('');
@@ -233,9 +225,9 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ onClose, onAdd }) 
                   {...register('status')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {STATUS_OPTIONS.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  {workflowColumns.map(column => (
+                    <option key={column.id} value={column.id}>
+                      {column.title}
                     </option>
                   ))}
                 </select>

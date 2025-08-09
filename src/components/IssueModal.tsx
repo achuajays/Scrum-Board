@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 
 interface IssueModalProps {
   issue: Issue;
+  workflowColumns: { id: string; title: string }[];
   onClose: () => void;
   onUpdate: (issue: Issue) => void;
 }
@@ -18,7 +19,7 @@ type FormData = {
   story_points: number;
 };
 
-export const IssueModal: React.FC<IssueModalProps> = ({ issue, onClose, onUpdate }) => {
+export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -153,15 +154,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, onClose, onUpdate
     { value: 'highest', label: 'Highest', color: 'bg-red-500' },
   ];
 
-  const STATUS_OPTIONS = [
-    { value: 'backlog', label: 'Backlog' },
-    { value: 'todo', label: 'To Do' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'dev', label: 'Dev' },
-    { value: 'uat', label: 'UAT' },
-    { value: 'done', label: 'Done' },
-  ];
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
@@ -265,9 +257,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, onClose, onUpdate
                       {...register('status')}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      {STATUS_OPTIONS.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      {workflowColumns.map(column => (
+                        <option key={column.id} value={column.id}>
+                          {column.title}
                         </option>
                       ))}
                     </select>

@@ -53,7 +53,7 @@ export const ScrumBoard: React.FC = () => {
 
   useEffect(() => {
     loadIssues();
-  }, []);
+  }, [workflowColumns]);
 
   const loadIssues = async () => {
     try {
@@ -322,6 +322,7 @@ export const ScrumBoard: React.FC = () => {
       {selectedIssue && (
         <IssueModal
           issue={selectedIssue}
+          workflowColumns={workflowColumns}
           onClose={() => setSelectedIssue(null)}
           onUpdate={handleIssueUpdate}
         />
@@ -329,6 +330,7 @@ export const ScrumBoard: React.FC = () => {
 
       {isAddModalOpen && (
         <AddIssueModal
+          workflowColumns={workflowColumns}
           onClose={() => setIsAddModalOpen(false)}
           onAdd={handleAddIssue}
         />
@@ -338,7 +340,10 @@ export const ScrumBoard: React.FC = () => {
         <WorkflowModal
           columns={workflowColumns}
           onClose={() => setIsWorkflowModalOpen(false)}
-          onUpdate={setWorkflowColumns}
+          onUpdate={(newColumns) => {
+            setWorkflowColumns(newColumns);
+            loadIssues();
+          }}
         />
       )}
 

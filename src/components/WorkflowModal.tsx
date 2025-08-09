@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, GripVertical } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { supabase } from '../lib/supabase';
 
 interface WorkflowModalProps {
   columns: { id: string; title: string }[];
@@ -14,7 +15,9 @@ type FormData = {
 
 export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, onUpdate }) => {
   const [localColumns, setLocalColumns] = useState(columns);
+  const [originalColumns] = useState(columns);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
 
@@ -30,12 +33,55 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
   };
 
   const handleDeleteColumn = (columnId: string) => {
+    // Prevent deletion of essential columns
+    if (columnId === 'backlog' || columnId === 'done') {
+      alert('Cannot delete essential columns (Backlog and Done)');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this column? All issues in this column will be moved to Backlog.')) {
+      return;
+    }
+    
     setLocalColumns(localColumns.filter(col => col.id !== columnId));
   };
 
-  const handleSave = () => {
-    onUpdate(localColumns);
-    onClose();
+  const handleSave = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Find deleted columns
+      const deletedColumns = originalColumns.filter(
+        originalCol => !localColumns.find(localCol => localCol.id === originalCol.id)
+      );
+      
+      // Move issues from deleted columns to backlog
+      for (const deletedColumn of deletedColumns) {
+        if (deletedColumn.id !== 'backlog' && deletedColumn.id !== 'done') {
+          const { error } = await supabase
+            .from('issues')
+            .update({ 
+              status: 'backlog',
+              updated_at: new Date().toISOString()
+            })
+            .eq('status', deletedColumn.id);
+            
+          if (error) {
+            console.error(`Error moving issues from ${deletedColumn.id} to backlog:`, error);
+            throw error;
+          }
+        }
+      }
+      
+      // Update the workflow columns
+      onUpdate(localColumns);
+      onClose();
+    } catch (error) {
+      console.error('Error saving workflow changes:', error);
+      alert('Error saving changes. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const moveColumn = (fromIndex: number, toIndex: number) => {
@@ -100,6 +146,7 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
                     )}
                     <button
                       onClick={() => handleDeleteColumn(column.id)}
+                      disabled={column.id === 'backlog' || column.id === 'done'}
                       className="p-1 hover:bg-red-100 rounded text-red-600 hover:text-red-700"
                       title="Delete column"
                     >
@@ -161,9 +208,10 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
               </button>
               <button
                 onClick={handleSave}
+                disabled={isLoading}
                 className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-all duration-200 transform hover:-translate-y-0.5"
               >
-                Save Changes
+                {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>
