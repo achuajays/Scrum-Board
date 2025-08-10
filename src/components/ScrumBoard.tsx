@@ -74,6 +74,12 @@ export const ScrumBoard: React.FC = () => {
       setColumns(columnsData);
     } catch (error) {
       console.error('Error loading issues:', error);
+      // Show user-friendly error message
+      if (error instanceof Error && error.message.includes('Missing Supabase environment variables')) {
+        alert('Database connection error: Please check your Supabase configuration.');
+      } else {
+        alert('Failed to load issues. Please check your internet connection and try again.');
+      }
     } finally {
       setLoading(false);
     }
