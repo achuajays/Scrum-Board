@@ -8,6 +8,7 @@ interface IssueModalProps {
   workflowColumns: { id: string; title: string }[];
   onClose: () => void;
   onUpdate: (issue: Issue) => void;
+  onDelete: (issueId: string) => void;
 }
 
 type FormData = {
@@ -19,7 +20,7 @@ type FormData = {
   story_points: number;
 };
 
-export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate }) => {
+export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate, onDelete }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -27,6 +28,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -71,6 +73,23 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
     }
   };
 
+  const handleDelete = async () => {
+    const confirmMessage = `Are you sure you want to delete this issue?\n\n"${issue.title}"\n\nThis action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await onDelete(issue.id);
+    } catch (error) {
+      console.error('Error deleting issue:', error);
+      alert('Failed to delete issue. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
