@@ -233,6 +233,22 @@ export const ScrumBoard: React.FC = () => {
     }
   };
 
+  const handleDeleteIssue = async (issueId: string) => {
+    try {
+      const { error } = await supabase
+        .from('issues')
+        .delete()
+        .eq('id', issueId);
+
+      if (error) throw error;
+      
+      setSelectedIssue(null);
+      await loadIssues();
+    } catch (error) {
+      console.error('Error deleting issue:', error);
+      throw error;
+    }
+  };
   const handleAddIssue = async (newIssue: Omit<Issue, 'id' | 'created_at' | 'updated_at' | 'position'>) => {
     try {
       const targetColumn = columns.find(col => col.id === newIssue.status);
@@ -325,6 +341,7 @@ export const ScrumBoard: React.FC = () => {
           workflowColumns={workflowColumns}
           onClose={() => setSelectedIssue(null)}
           onUpdate={handleIssueUpdate}
+          onDelete={handleDeleteIssue}
         />
       )}
 
