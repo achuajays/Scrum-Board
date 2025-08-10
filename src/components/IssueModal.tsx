@@ -20,7 +20,6 @@ type FormData = {
 };
 
 export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate }) => {
-export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate, onDelete }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -28,7 +27,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -173,26 +171,12 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                 </h2>
                 <p className="text-sm text-slate-600">{issue.title}</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600 hover:text-red-700 disabled:opacity-50"
-                  title="Delete issue"
-                >
-                  {isDeleting ? (
-                    <div className="w-5 h-5 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-                  ) : (
-                    <Trash2 className="w-5 h-5" />
-                  )}
-                </button>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             
             <div className="flex space-x-1 mt-4">
@@ -326,24 +310,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                     className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
-                  >
-                    {isDeleting ? (
-                      <>
-                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete Issue
-                      </>
-                    )}
                   </button>
                   <button
                     type="submit"
