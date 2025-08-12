@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save } from 'lucide-react';
+import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { Issue, Comment, supabase } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
 
@@ -8,6 +8,7 @@ interface IssueModalProps {
   workflowColumns: { id: string; title: string }[];
   onClose: () => void;
   onUpdate: (issue: Issue) => void;
+  onDelete: (issueId: string) => void;
 }
 
 type FormData = {
@@ -19,7 +20,7 @@ type FormData = {
   story_points: number;
 };
 
-export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate }) => {
+export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate, onDelete }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -27,6 +28,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -68,6 +71,19 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
       await onUpdate(updatedIssue);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(issue.id);
+      onClose();
+    } catch (error) {
+      console.error('Error deleting issue:', error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -171,12 +187,21 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                 </h2>
                 <p className="text-sm text-slate-600">{issue.title}</p>
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600 hover:text-red-700"
+                  title="Delete issue"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
             <div className="flex space-x-1 mt-4">
@@ -455,6 +480,63 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
             )}
           </div>
         </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-60 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+              onClick={() => setShowDeleteConfirm(false)}
+            />
+            
+            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300">
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Delete Issue</h3>
+                    <p className="text-sm text-slate-600">This action cannot be undone</p>
+                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <p className="text-slate-700 mb-2">
+                    Are you sure you want to delete this issue?
+                  </p>
+                  <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                    <p className="font-medium text-slate-900 text-sm">
+                      {issue.issue_type.toUpperCase()}-{issue.id.slice(-4)}: {issue.title}
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-600 mt-2">
+                    All comments and attachments will also be permanently deleted.
+                  </p>
+                </div>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg disabled:opacity-50 transition-colors"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete Issue'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
