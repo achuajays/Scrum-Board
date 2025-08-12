@@ -74,12 +74,6 @@ export const ScrumBoard: React.FC = () => {
       setColumns(columnsData);
     } catch (error) {
       console.error('Error loading issues:', error);
-      // Show user-friendly error message
-      if (error instanceof Error && error.message.includes('Missing Supabase environment variables')) {
-        alert('Database connection error: Please check your Supabase configuration.');
-      } else {
-        alert('Failed to load issues. Please check your internet connection and try again.');
-      }
     } finally {
       setLoading(false);
     }
@@ -239,22 +233,6 @@ export const ScrumBoard: React.FC = () => {
     }
   };
 
-  const handleDeleteIssue = async (issueId: string) => {
-    try {
-      const { error } = await supabase
-        .from('issues')
-        .delete()
-        .eq('id', issueId);
-
-      if (error) throw error;
-      
-      setSelectedIssue(null);
-      await loadIssues();
-    } catch (error) {
-      console.error('Error deleting issue:', error);
-      throw error;
-    }
-  };
   const handleAddIssue = async (newIssue: Omit<Issue, 'id' | 'created_at' | 'updated_at' | 'position'>) => {
     try {
       const targetColumn = columns.find(col => col.id === newIssue.status);
@@ -347,7 +325,6 @@ export const ScrumBoard: React.FC = () => {
           workflowColumns={workflowColumns}
           onClose={() => setSelectedIssue(null)}
           onUpdate={handleIssueUpdate}
-          onDelete={handleDeleteIssue}
         />
       )}
 
