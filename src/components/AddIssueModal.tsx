@@ -2,7 +2,6 @@ import React from 'react';
 import { X, CheckSquare, Bug, Zap } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Issue } from '../lib/supabase';
-import { useToast } from '../contexts/ToastContext';
 
 interface AddIssueModalProps {
   workflowColumns: { id: string; title: string }[];
@@ -41,7 +40,6 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
   const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = React.useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const { showError } = useToast();
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     defaultValues: {
@@ -64,14 +62,14 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
 
     // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      showError('File too large', 'File size must be less than 5MB');
+      alert('File size must be less than 5MB');
       return;
     }
 
     // Check file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(file.type)) {
-      showError('Invalid file type', 'Please upload an image, PDF, or document file');
+      alert('Please upload an image, PDF, or document file');
       return;
     }
 
@@ -118,7 +116,7 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
         finalImageUrl = await convertFileToBase64(uploadedFile);
       } catch (error) {
         console.error('Error converting file to base64:', error);
-        showError('Upload failed', 'Error processing uploaded file. Please try again.');
+        alert('Error processing uploaded file');
         return;
       }
     }

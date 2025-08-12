@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { X, Plus, Trash2, GripVertical } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { supabase } from '../lib/supabase';
-import { useToast } from '../contexts/ToastContext';
-import { ConfirmationModal } from './ConfirmationModal';
 
 interface WorkflowModalProps {
   columns: { id: string; title: string }[];
@@ -20,8 +18,6 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
   const [originalColumns] = useState(columns);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
-  const { showError, showWarning, showSuccess } = useToast();
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>();
 
@@ -39,18 +35,15 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
   const handleDeleteColumn = (columnId: string) => {
     // Prevent deletion of essential columns
     if (columnId === 'backlog' || columnId === 'done') {
-      showWarning('Cannot delete column', 'Essential columns (Backlog and Done) cannot be deleted');
+      alert('Cannot delete essential columns (Backlog and Done)');
       return;
     }
     
-    setColumnToDelete(columnId);
-  };
-
-  const confirmDeleteColumn = () => {
-    if (columnToDelete) {
-      setLocalColumns(localColumns.filter(col => col.id !== columnToDelete));
-      setColumnToDelete(null);
+    if (!confirm('Are you sure you want to delete this column? All issues in this column will be moved to Backlog.')) {
+      return;
     }
+    
+    setLocalColumns(localColumns.filter(col => col.id !== columnId));
   };
 
   const handleSave = async () => {
@@ -82,11 +75,10 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
       
       // Update the workflow columns
       onUpdate(localColumns);
-      showSuccess('Workflow updated', 'Your workflow changes have been saved successfully');
       onClose();
     } catch (error) {
       console.error('Error saving workflow changes:', error);
-      showError('Save failed', 'Error saving changes. Please try again.');
+      alert('Error saving changes. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -155,7 +147,7 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
                     <button
                       onClick={() => handleDeleteColumn(column.id)}
                       disabled={column.id === 'backlog' || column.id === 'done'}
-                      className="p-1 hover:bg-red-100 rounded text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-1 hover:bg-red-100 rounded text-red-600 hover:text-red-700"
                       title="Delete column"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -224,17 +216,6 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({ columns, onClose, 
             </div>
           </div>
         </div>
-
-        <ConfirmationModal
-          isOpen={columnToDelete !== null}
-          title="Delete Column"
-          message={`Are you sure you want to delete this column? All issues in this column will be moved to Backlog.`}
-          confirmText="Delete Column"
-          cancelText="Cancel"
-          confirmVariant="danger"
-          onConfirm={confirmDeleteColumn}
-          onCancel={() => setColumnToDelete(null)}
-        />
       </div>
     </div>
   );
