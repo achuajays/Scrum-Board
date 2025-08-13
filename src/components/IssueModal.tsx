@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle, Download, Eye } from 'lucide-react';
 import { Issue, Comment, supabase } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
 
@@ -42,6 +42,169 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
     },
   });
 
+  // Helper function to extract MIME type from Base64 data URL
+  const getMimeTypeFromDataUrl = (dataUrl: string): string | null => {
+    if (!dataUrl || !dataUrl.startsWith('data:')) return null;
+    const match = dataUrl.match(/^data:([^;]+);base64,/);
+    return match ? match[1] : null;
+  };
+
+  // Helper function to get file extension from MIME type
+  const getFileExtension = (mimeType: string): string => {
+    const extensions: { [key: string]: string } = {
+      'application/pdf': 'PDF',
+      'application/msword': 'DOC',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'DOCX',
+      'text/plain': 'TXT',
+      'application/vnd.ms-excel': 'XLS',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
+    };
+    return extensions[mimeType] || 'FILE';
+  };
+
+  // Helper function to render attachment based on file type
+  const renderAttachment = (url: string) => {
+    if (!url) return null;
+
+    // Handle regular URLs (not Base64)
+    if (!url.startsWith('data:')) {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Attachment
+          </label>
+          <img
+            src={url}
+            alt="Issue attachment"
+            className="max-w-md rounded-lg border border-slate-200"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          <div className="hidden p-4 border border-slate-200 rounded-lg bg-slate-50">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-slate-500" />
+              <span className="text-sm text-slate-700">Attachment (unable to display)</span>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+              >
+                View
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const mimeType = getMimeTypeFromDataUrl(url);
+    if (!mimeType) return null;
+
+    // Handle images
+    if (mimeType.startsWith('image/')) {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Image Attachment
+          </label>
+          <img
+            src={url}
+            alt="Issue attachment"
+            className="max-w-md rounded-lg border border-slate-200 shadow-sm"
+          />
+        </div>
+      );
+    }
+
+    // Handle PDFs
+    if (mimeType === 'application/pdf') {
+      return (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            PDF Attachment
+          </label>
+          <div className="border border-slate-200 rounded-lg bg-slate-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-slate-900">PDF Document</p>
+                  <p className="text-sm text-slate-500">Click to view or download</p>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  View
+                </a>
+                <a
+                  href={url}
+                  download
+                  className="inline-flex items-center px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded transition-colors"
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Download
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Handle other document types
+    const fileExtension = getFileExtension(mimeType);
+    return (
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Document Attachment
+        </label>
+        <div className="border border-slate-200 rounded-lg bg-slate-50 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="font-medium text-slate-900">{fileExtension} Document</p>
+                <p className="text-sm text-slate-500">Click to view or download</p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                View
+              </a>
+              <a
+                href={url}
+                download
+                className="inline-flex items-center px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded transition-colors"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   useEffect(() => {
     loadComments();
   }, [issue.id]);
@@ -316,16 +479,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                 </div>
 
                 {issue.image_url && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Attachment
-                    </label>
-                    <img
-                      src={issue.image_url}
-                      alt="Issue attachment"
-                      className="max-w-md rounded-lg border border-slate-200"
-                    />
-                  </div>
+                  renderAttachment(issue.image_url)
                 )}
 
                 <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
@@ -412,11 +566,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                           <div>
                             <p className="text-slate-700 text-sm">{comment.content}</p>
                             {comment.image_url && (
-                              <img
-                                src={comment.image_url}
-                                alt="Comment attachment"
-                                className="mt-2 max-w-xs rounded-lg border border-slate-200"
-                              />
+                              <div className="mt-2">
+                                {renderAttachment(comment.image_url)}
+                              </div>
                             )}
                           </div>
                         )}
@@ -456,12 +608,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                     
                     {newCommentImage && (
                       <div className="mt-2">
-                        <img
-                          src={newCommentImage}
-                          alt="Preview"
-                          className="max-w-xs rounded-lg border border-slate-200"
-                          onError={() => setNewCommentImage('')}
-                        />
+                        {renderAttachment(newCommentImage)}
                       </div>
                     )}
                     
