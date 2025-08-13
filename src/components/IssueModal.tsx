@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle, Download, Eye } from 'lucide-react';
-import { Issue, Comment, supabase } from '../lib/supabase';
+import { Issue, Comment, Assignee, supabase, fetchAssignees } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
 
 interface IssueModalProps {
@@ -30,6 +30,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [loadingAssignees, setLoadingAssignees] = useState(true);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -207,7 +209,15 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   };
   useEffect(() => {
     loadComments();
+    loadAssignees();
   }, [issue.id]);
+
+  const loadAssignees = async () => {
+    setLoadingAssignees(true);
+    const data = await fetchAssignees();
+    setAssignees(data);
+    setLoadingAssignees(false);
+  };
 
   const loadComments = async () => {
     try {
@@ -459,10 +469,20 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Assignee
                     </label>
-                    <input
+                    <select
                       {...register('assignee_name')}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                      disabled={loadingAssignees}
+                    >
+                      <option value="">
+                        {loadingAssignees ? 'Loading assignees...' : 'Select assignee (optional)'}
+                      </option>
+                      {assignees.map(assignee => (
+                        <option key={assignee.id} value={assignee.name}>
+                          {assignee.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

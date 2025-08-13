@@ -32,6 +32,15 @@ export type Comment = {
   updated_at?: string;
 };
 
+export type Assignee = {
+  id: string;
+  name: string;
+  email?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Column = {
   id: string;
   title: string;
@@ -44,4 +53,19 @@ export type ProjectInfo = {
   value: string;
   created_at: string;
   updated_at: string;
+};
+
+export const fetchAssignees = async (): Promise<Assignee[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('assignees')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching assignees:', error);
+    return [];
+  }
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, CheckSquare, Bug, Zap } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { Issue } from '../lib/supabase';
+import { Issue, Assignee, fetchAssignees } from '../lib/supabase';
 
 interface AddIssueModalProps {
   workflowColumns: { id: string; title: string }[];
@@ -40,6 +40,8 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
   const [uploadedFile, setUploadedFile] = React.useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = React.useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [assignees, setAssignees] = React.useState<Assignee[]>([]);
+  const [loadingAssignees, setLoadingAssignees] = React.useState(true);
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     defaultValues: {
@@ -55,6 +57,17 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
   });
 
   const selectedIssueType = watch('issue_type');
+
+  React.useEffect(() => {
+    const loadAssignees = async () => {
+      setLoadingAssignees(true);
+      const data = await fetchAssignees();
+      setAssignees(data);
+      setLoadingAssignees(false);
+    };
+    
+    loadAssignees();
+  }, []);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -239,11 +252,20 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Assignee
                 </label>
-                <input
+                <select
                   {...register('assignee_name')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter assignee name"
-                />
+                  disabled={loadingAssignees}
+                >
+                  <option value="">
+                    {loadingAssignees ? 'Loading assignees...' : 'Select assignee (optional)'}
+                  </option>
+                  {assignees.map(assignee => (
+                    <option key={assignee.id} value={assignee.name}>
+                      {assignee.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
