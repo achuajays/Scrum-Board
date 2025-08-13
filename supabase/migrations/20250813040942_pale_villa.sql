@@ -13,7 +13,7 @@
   2. Security
     - Enable RLS on assignees table
     - Add policy for public read access
-
+  
   3. Sample Data
     - Insert sample assignees based on existing data
 */
