@@ -237,9 +237,14 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
+      // Find the selected assignee to get their avatar
+      const selectedAssignee = assignees.find(assignee => assignee.name === data.assignee_name);
+      const assigneeAvatar = selectedAssignee?.avatar_url || '';
+
       const updatedIssue = {
         ...issue,
         ...data,
+        assignee_avatar: assigneeAvatar,
       };
       await onUpdate(updatedIssue);
     } finally {

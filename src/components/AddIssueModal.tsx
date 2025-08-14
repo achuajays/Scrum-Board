@@ -134,10 +134,14 @@ export const AddIssueModal: React.FC<AddIssueModalProps> = ({ workflowColumns, o
       }
     }
 
+    // Find the selected assignee to get their avatar
+    const selectedAssignee = assignees.find(assignee => assignee.name === data.assignee_name);
+    const assigneeAvatar = selectedAssignee?.avatar_url || '';
+
     await onAdd({
       ...data,
       image_url: finalImageUrl,
-      assignee_avatar: '',
+      assignee_avatar: assigneeAvatar,
     });
   };
 

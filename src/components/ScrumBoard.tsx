@@ -281,7 +281,9 @@ export const ScrumBoard: React.FC = () => {
       <div className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold text-slate-900">McMillan</h1>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {import.meta.env.VITE_BOARD_NAME || 'Scrum Board'}
+            </h1>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setIsWorkflowModalOpen(true)}

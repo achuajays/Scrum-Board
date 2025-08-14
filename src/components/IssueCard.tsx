@@ -78,10 +78,29 @@ export const IssueCard: React.FC<IssueCardProps> = ({ issue, onClick, isDragging
       </div>
       
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           {issue.assignee_name && (
-            <div className="w-6 h-6 bg-slate-300 rounded-full flex items-center justify-center text-xs font-medium text-slate-600">
-              {issue.assignee_name.charAt(0).toUpperCase()}
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 bg-slate-300 rounded-full flex items-center justify-center text-xs font-medium text-slate-600 overflow-hidden">
+                {issue.assignee_avatar ? (
+                  <img
+                    src={issue.assignee_avatar}
+                    alt={issue.assignee_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.nextElementSibling?.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                <span className={issue.assignee_avatar ? 'hidden' : ''}>
+                  {issue.assignee_name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <span className="text-xs text-slate-600 font-medium truncate max-w-20">
+                {issue.assignee_name}
+              </span>
             </div>
           )}
         </div>
