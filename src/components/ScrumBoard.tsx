@@ -14,8 +14,8 @@ import {
   arrayMove,
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { Plus, Search, X, Filter } from 'lucide-react';
-import { supabase, Issue, Column, Assignee, fetchAssignees, fetchIssuesWithFilters } from '../lib/supabase';
+import { Plus } from 'lucide-react';
+import { supabase, Issue, Column } from '../lib/supabase';
 import { BoardColumn } from './BoardColumn';
 import { IssueCard } from './IssueCard';
 import { IssueModal } from './IssueModal';
@@ -39,10 +39,6 @@ export const ScrumBoard: React.FC = () => {
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
   const [isProjectInfoModalOpen, setIsProjectInfoModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterAssigneeId, setFilterAssigneeId] = useState('');
-  const [assignees, setAssignees] = useState<Assignee[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -57,30 +53,21 @@ export const ScrumBoard: React.FC = () => {
 
   useEffect(() => {
     loadIssues();
-    loadAssignees();
   }, [workflowColumns]);
 
-  useEffect(() => {
-    // Debounce search to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      loadIssues();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, filterAssigneeId]);
-
-  const loadAssignees = async () => {
-    const data = await fetchAssignees();
-    setAssignees(data);
-  };
   const loadIssues = async () => {
     try {
-      const issues = await fetchIssuesWithFilters(searchTerm, filterAssigneeId);
+      const { data: issues, error } = await supabase
+        .from('issues')
+        .select('*')
+        .order('position');
+
+      if (error) throw error;
 
       const columnsData = workflowColumns.map(column => ({
         ...column,
         issues: issues
-          .filter(issue => issue.status === column.id)
+          ?.filter(issue => issue.status === column.id)
           .sort((a, b) => a.position - b.position) || [],
       }));
 
@@ -281,17 +268,6 @@ export const ScrumBoard: React.FC = () => {
     }
   };
 
-  const clearSearch = () => {
-    setSearchTerm('');
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setFilterAssigneeId('');
-  };
-
-  const hasActiveFilters = searchTerm.trim() || filterAssigneeId.trim();
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -309,22 +285,6 @@ export const ScrumBoard: React.FC = () => {
               {import.meta.env.VITE_BOARD_NAME || 'Scrum Board'}
             </h1>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`inline-flex items-center px-4 py-2 font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 ${
-                  hasActiveFilters || showFilters
-                    ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                    : 'bg-slate-500 hover:bg-slate-600 text-white'
-                }`}
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-                {hasActiveFilters && (
-                  <span className="ml-2 px-2 py-0.5 text-xs bg-white bg-opacity-20 rounded-full">
-                    {(searchTerm.trim() ? 1 : 0) + (filterAssigneeId.trim() ? 1 : 0)}
-                  </span>
-                )}
-              </button>
               <button
                 onClick={() => setIsWorkflowModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5"
@@ -346,119 +306,10 @@ export const ScrumBoard: React.FC = () => {
               </button>
             </div>
           </div>
-
-          {/* Search and Filter Section */}
-          {showFilters && (
-            <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Search Input */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Search Issues
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by title or description..."
-                      className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    {searchTerm && (
-                      <button
-                        onClick={clearSearch}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Assignee Filter */}
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Filter by Assignee
-                  </label>
-                  <select
-                    value={filterAssigneeId}
-                    onChange={(e) => setFilterAssigneeId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Assignees</option>
-                    {assignees.map(assignee => (
-                      <option key={assignee.id} value={assignee.id}>
-                        {assignee.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Clear Filters Button */}
-                {hasActiveFilters && (
-                  <div className="flex items-end">
-                    <button
-                      onClick={clearFilters}
-                      className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
-                    >
-                      Clear All
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Active Filters Display */}
-              {hasActiveFilters && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="text-sm text-slate-600">Active filters:</span>
-                  {searchTerm.trim() && (
-                    <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                      Search: "{searchTerm}"
-                      <button
-                        onClick={clearSearch}
-                        className="ml-1 text-blue-600 hover:text-blue-800"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-                  {filterAssigneeId.trim() && (
-                    <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                      Assignee: {assignees.find(a => a.id === filterAssigneeId)?.name}
-                      <button
-                        onClick={() => setFilterAssigneeId('')}
-                        className="ml-1 text-green-600 hover:text-green-800"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
       <div className="flex-1 p-6">
-        {/* Results Summary */}
-        {hasActiveFilters && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">
-                Showing {columns.reduce((total, col) => total + col.issues.length, 0)} filtered results
-              </span>
-              <button
-                onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Show all issues
-              </button>
-            </div>
-          </div>
-        )}
-
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
