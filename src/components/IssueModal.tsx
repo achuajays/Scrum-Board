@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle, Download, Eye } from 'lucide-react';
+import { X, MessageSquare, Clock, FileText, Image, Edit2, Trash2, Save, AlertTriangle, Download, Eye, Upload } from 'lucide-react';
 import { Issue, Comment, Assignee, supabase, fetchAssignees } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
 
@@ -18,6 +18,7 @@ type FormData = {
   status: Issue['status'];
   assignee_name: string;
   story_points: number;
+  image_url: string;
 };
 
 export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, onClose, onUpdate, onDelete }) => {
@@ -32,6 +33,10 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [isDeleting, setIsDeleting] = useState(false);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [loadingAssignees, setLoadingAssignees] = useState(true);
+  const [attachmentMethod, setAttachmentMethod] = useState<'url' | 'upload'>('url');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string>('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -41,6 +46,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
       status: issue.status,
       assignee_name: issue.assignee_name,
       story_points: issue.story_points,
+      image_url: issue.image_url || '',
     },
   });
 
@@ -62,6 +68,57 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'XLSX',
     };
     return extensions[mimeType] || 'FILE';
+  };
+
+  // Helper function to convert file to Base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle file upload
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please upload an image, PDF, or document file');
+      return;
+    }
+
+    setUploadedFile(file);
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setUploadPreview('');
+    }
+  };
+
+  // Remove uploaded file
+  const removeUploadedFile = () => {
+    setUploadedFile(null);
+    setUploadPreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   // Helper function to render attachment based on file type
@@ -207,6 +264,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
       </div>
     );
   };
+
   useEffect(() => {
     loadComments();
     loadAssignees();
@@ -237,6 +295,19 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
+      let finalImageUrl = data.image_url;
+
+      // If a file was uploaded, convert it to base64
+      if (uploadedFile) {
+        try {
+          finalImageUrl = await convertFileToBase64(uploadedFile);
+        } catch (error) {
+          console.error('Error converting file to base64:', error);
+          alert('Error processing uploaded file');
+          return;
+        }
+      }
+
       // Find the selected assignee to get their avatar
       const selectedAssignee = assignees.find(assignee => assignee.name === data.assignee_name);
       const assigneeAvatar = selectedAssignee?.avatar_url || '';
@@ -244,6 +315,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
       const updatedIssue = {
         ...issue,
         ...data,
+        image_url: finalImageUrl,
         assignee_avatar: assigneeAvatar,
       };
       await onUpdate(updatedIssue);
@@ -506,6 +578,97 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                 {issue.image_url && (
                   renderAttachment(issue.image_url)
                 )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                    Update Attachment (Optional)
+                  </label>
+                  
+                  <div className="space-y-4">
+                    <div className="flex space-x-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachmentMethod('url');
+                          removeUploadedFile();
+                        }}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          attachmentMethod === 'url'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        Image URL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachmentMethod('upload');
+                        }}
+                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          attachmentMethod === 'upload'
+                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                            : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+                        }`}
+                      >
+                        <Upload className="w-4 h-4 mr-1 inline" />
+                        Upload File
+                      </button>
+                    </div>
+
+                    {attachmentMethod === 'url' ? (
+                      <input
+                        {...register('image_url')}
+                        type="url"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter image URL"
+                        disabled={!!uploadedFile}
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          onChange={handleFileUpload}
+                          accept="image/*,.pdf,.doc,.docx,.txt"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <p className="text-xs text-slate-500">
+                          Supported formats: Images (JPG, PNG, GIF, WebP), PDF, Word documents, Text files. Max size: 5MB
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Preview uploaded file */}
+                    {uploadedFile && (
+                      <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-slate-700">New Upload:</span>
+                            <span className="text-sm text-slate-600">{uploadedFile.name}</span>
+                            <span className="text-xs text-slate-500">
+                              ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={removeUploadedFile}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        {uploadPreview && (
+                          <img
+                            src={uploadPreview}
+                            alt="Upload preview"
+                            className="max-w-xs max-h-32 rounded border border-slate-200"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
                   <button
