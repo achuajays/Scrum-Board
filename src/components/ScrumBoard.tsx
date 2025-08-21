@@ -220,6 +220,8 @@ export const ScrumBoard: React.FC = () => {
           priority: updatedIssue.priority,
           status: updatedIssue.status,
           assignee_name: updatedIssue.assignee_name,
+          assignee_avatar: updatedIssue.assignee_avatar,
+          image_url: updatedIssue.image_url,
           story_points: updatedIssue.story_points,
           updated_at: new Date().toISOString(),
         })
