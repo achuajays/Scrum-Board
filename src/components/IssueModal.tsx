@@ -37,6 +37,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string>('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isReplacingAttachment, setIsReplacingAttachment] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
@@ -119,6 +120,22 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  // Handle removing attachment
+  const handleRemoveAttachment = () => {
+    if (!confirm('Are you sure you want to remove this attachment?')) return;
+    
+    setValue('image_url', '');
+    removeUploadedFile();
+    setIsReplacingAttachment(false);
+  };
+
+  // Handle replacing attachment
+  const handleReplaceAttachment = () => {
+    setIsReplacingAttachment(true);
+    setValue('image_url', '');
+    removeUploadedFile();
   };
 
   // Helper function to render attachment based on file type
@@ -209,7 +226,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                 </a>
                 <a
                   href={url}
-                  download
+                  download="document.pdf"
                   className="inline-flex items-center px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded transition-colors"
                 >
                   <Download className="w-4 h-4 mr-1" />
@@ -252,7 +269,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
               </a>
               <a
                 href={url}
-                download
+                download={`document.${fileExtension.toLowerCase()}`}
                 className="inline-flex items-center px-3 py-1 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded transition-colors"
               >
                 <Download className="w-4 h-4 mr-1" />
@@ -575,100 +592,141 @@ export const IssueModal: React.FC<IssueModalProps> = ({ issue, workflowColumns, 
                   </div>
                 </div>
 
-                {issue.image_url && (
-                  renderAttachment(issue.image_url)
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
-                    Update Attachment (Optional)
-                  </label>
-                  
-                  <div className="space-y-4">
-                    <div className="flex space-x-4">
+                {/* Attachment Management Section */}
+                {issue.image_url && !isReplacingAttachment ? (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Current Attachment
+                    </label>
+                    {renderAttachment(issue.image_url)}
+                    <div className="flex space-x-3 mt-4">
                       <button
                         type="button"
-                        onClick={() => {
-                          setAttachmentMethod('url');
-                          removeUploadedFile();
-                        }}
-                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          attachmentMethod === 'url'
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
-                        }`}
+                        onClick={handleReplaceAttachment}
+                        className="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
                       >
-                        Image URL
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Replace Attachment
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setAttachmentMethod('upload');
-                        }}
-                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                          attachmentMethod === 'upload'
-                            ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                            : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
-                        }`}
+                        onClick={handleRemoveAttachment}
+                        className="inline-flex items-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors"
                       >
-                        <Upload className="w-4 h-4 mr-1 inline" />
-                        Upload File
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove Attachment
                       </button>
                     </div>
-
-                    {attachmentMethod === 'url' ? (
-                      <input
-                        {...register('image_url')}
-                        type="url"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter image URL"
-                        disabled={!!uploadedFile}
-                      />
-                    ) : (
-                      <div className="space-y-3">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          onChange={handleFileUpload}
-                          accept="image/*,.pdf,.doc,.docx,.txt"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        <p className="text-xs text-slate-500">
-                          Supported formats: Images (JPG, PNG, GIF, WebP), PDF, Word documents, Text files. Max size: 5MB
-                        </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-3">
+                      {issue.image_url ? 'Replace Attachment' : 'Add Attachment (Optional)'}
+                    </label>
+                    
+                    <div className="space-y-4">
+                      <div className="flex space-x-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachmentMethod('url');
+                            removeUploadedFile();
+                          }}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            attachmentMethod === 'url'
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                              : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          Image URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachmentMethod('upload');
+                          }}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            attachmentMethod === 'upload'
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                              : 'bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200'
+                          }`}
+                        >
+                          <Upload className="w-4 h-4 mr-1 inline" />
+                          Upload File
+                        </button>
                       </div>
-                    )}
 
-                    {/* Preview uploaded file */}
-                    {uploadedFile && (
-                      <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-slate-700">New Upload:</span>
-                            <span className="text-sm text-slate-600">{uploadedFile.name}</span>
-                            <span className="text-xs text-slate-500">
-                              ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
-                            </span>
+                      {attachmentMethod === 'url' ? (
+                        <input
+                          {...register('image_url')}
+                          type="url"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Enter image URL"
+                          disabled={!!uploadedFile}
+                        />
+                      ) : (
+                        <div className="space-y-3">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            onChange={handleFileUpload}
+                            accept="image/*,.pdf,.doc,.docx,.txt"
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                          />
+                          <p className="text-xs text-slate-500">
+                            Supported formats: Images (JPG, PNG, GIF, WebP), PDF, Word documents, Text files. Max size: 5MB
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Preview uploaded file */}
+                      {uploadedFile && (
+                        <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium text-slate-700">New Upload:</span>
+                              <span className="text-sm text-slate-600">{uploadedFile.name}</span>
+                              <span className="text-xs text-slate-500">
+                                ({(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={removeUploadedFile}
+                              className="text-red-600 hover:text-red-700 text-sm font-medium"
+                            >
+                              Remove
+                            </button>
                           </div>
+                          {uploadPreview && (
+                            <img
+                              src={uploadPreview}
+                              alt="Upload preview"
+                              className="max-w-xs max-h-32 rounded border border-slate-200"
+                            />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Cancel replacement option */}
+                      {issue.image_url && isReplacingAttachment && (
+                        <div className="pt-2">
                           <button
                             type="button"
-                            onClick={removeUploadedFile}
-                            className="text-red-600 hover:text-red-700 text-sm font-medium"
+                            onClick={() => {
+                              setIsReplacingAttachment(false);
+                              setValue('image_url', issue.image_url || '');
+                              removeUploadedFile();
+                            }}
+                            className="text-sm text-slate-600 hover:text-slate-900 underline"
                           >
-                            Remove
+                            Cancel replacement
                           </button>
                         </div>
-                        {uploadPreview && (
-                          <img
-                            src={uploadPreview}
-                            alt="Upload preview"
-                            className="max-w-xs max-h-32 rounded border border-slate-200"
-                          />
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
                   <button
